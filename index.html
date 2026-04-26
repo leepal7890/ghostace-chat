@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>VICE MYANMAR</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f0c29">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        :root { 
+            --accent: #00d2ff; 
+            --danger: #ff4b2b; 
+            --glass: rgba(0, 0, 0, 0.6);
+            --border-glass: rgba(255, 255, 255, 0.1);
+        }
+        
+        * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            margin: 0; 
+            background: #000;
+            height: 100vh; 
+            color: white; 
+            overflow: hidden; 
+        }
+
+        /* Wallpaper Overlay */
+        #chat-scr {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            background: url('https://i.ibb.co/wFQCr9L7/IMG-20260410-193548-794.jpg') center center;
+            background-size: cover;
+            position: relative;
+        }
+
+        #chat-scr::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.4); /* Wallpaper ကို နည်းနည်းမှောင်အောင်လုပ်ထားတာပါ */
+            z-index: 0;
+        }
+
+        .header, #msg-flow, .input-area { z-index: 1; }
+
+        .header { 
+            background: rgba(0, 0, 0, 0.8); 
+            backdrop-filter: blur(15px); 
+            padding: 18px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid var(--border-glass);
+            padding-top: env(safe-area-inset-top);
+        }
+
+        #msg-flow { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 15px; }
+
+        .bubble { 
+            padding: 12px 16px; 
+            border-radius: 18px; 
+            max-width: 85%; 
+            font-size: 14.5px; 
+            backdrop-filter: blur(8px);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .sent { 
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.8), rgba(58, 123, 213, 0.8)); 
+            color: white; align-self: flex-end; border-bottom-right-radius: 2px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .recv { 
+            background: rgba(44, 44, 46, 0.85); 
+            color: #fff; align-self: flex-start; border-bottom-left-radius: 2px;
+            border: 1px solid var(--border-glass);
+        }
+
+        .chat-img { width: 100%; max-width: 250px; border-radius: 12px; cursor: pointer; }
+
+        .input-area { 
+            background: rgba(0, 0, 0, 0.9); 
+            backdrop-filter: blur(20px); 
+            padding: 12px 15px; 
+            display: flex; align-items: center; gap: 10px; 
+            border-top: 1px solid var(--border-glass);
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        }
+
+        .msg-in { 
+            flex: 1; padding: 12px 18px; border-radius: 25px; 
+            border: 1px solid var(--border-glass); background: rgba(255,255,255,0.08); 
+            color: white; outline: none;
+        }
+
+        .btn-send { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); border: none; color: white; display: flex; align-items: center; justify-content: center; }
+
+        /* Login Screen */
+        #login-scr { height: 100vh; display: flex; align-items: center; justify-content: center; background: #000; }
+        .login-card { background: rgba(28, 28, 30, 1); border: 1px solid var(--border-glass); padding: 40px 30px; border-radius: 30px; width: 90%; max-width: 360px; text-align: center; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div id="login-scr">
+    <div class="login-card">
+        <h2 style="margin:0;">VICE <span style="color:var(--accent)">MYANMAR</span></h2>
+        <p id="status-text" style="color:#888; font-size:12px; margin-bottom:25px;">Enter details to access room</p>
+        <div id="login-form">
+            <input type="text" id="uName" placeholder="Name" class="msg-in" style="width:100%; margin-bottom:12px;">
+            <input type="tel" id="uPh" placeholder="Phone Number" class="msg-in" style="width:100%; margin-bottom:20px;">
+            <button onclick="login()" style="width:100%; padding:14px; border-radius:25px; border:none; background:white; color:black; font-weight:bold;">CONNECT</button>
+        </div>
+    </div>
+</div>
+
+<div id="chat-scr">
+    <div class="header">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:8px; height:8px; background:#00ff88; border-radius:50%; box-shadow: 0 0 10px #00ff88;"></div>
+            <span style="font-weight:bold; letter-spacing:1px;">VICE MYANMAR</span>
+        </div>
+        <div>
+            <button id="admin-btn" onclick="toggleAdmin()" style="display:none; background:none; border:none; color:white; font-size:20px; margin-right:10px;">🛡️</button>
+            <button onclick="logout()" style="background:none; border:none; color:#ff4b2b; font-size:18px;"><i class="bi bi-box-arrow-right"></i></button>
+        </div>
+    </div>
+    <div id="msg-flow"></div>
+    <div class="input-area">
+        <label style="cursor:pointer; color:var(--accent); font-size:22px;"><i class="bi bi-plus-circle"></i><input type="file" id="img-in" hidden accept="image/*" onchange="sendImg(this)"></label>
+        <input type="text" id="msg-box" class="msg-in" placeholder="Message..." onkeypress="if(event.key==='Enter') sendTxt()">
+        <button onclick="sendTxt()" class="btn-send"><i class="bi bi-send-fill"></i></button>
+    </div>
+</div>
+
+<div id="admin-dash" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.98); z-index:2000; padding:40px 20px; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; margin-bottom:20px;"><h3>Access Control</h3><button onclick="toggleAdmin()" style="color:white; background:var(--glass); border:1px solid var(--border-glass); padding:8px 15px; border-radius:10px;">CLOSE</button></div>
+    <div id="request-list"></div>
+</div>
+
+<script>
+    const ADMIN_PH = "09672264454";
+    const ably = new Ably.Realtime({ key: 'Nt4BVQ.HoIzUA:eXv4-B4_uJx-0PmEN1WDOQ4KMjreeEUe2_G6F5VObd8' });
+    const channel = ably.channels.get('vice_myanmar_v1');
+    let myName = "", myPhone = "", isAdmin = false;
+
+    // Check LocalStorage on Load
+    window.onload = () => {
+        const savedUser = localStorage.getItem('auro_user');
+        if(savedUser) {
+            const user = JSON.parse(savedUser);
+            myName = user.name; myPhone = user.phone;
+            if(myPhone === ADMIN_PH) { isAdmin = true; startHub(); }
+            else { 
+                showWaiting();
+                channel.publish('join_req', { name: myName, phone: myPhone });
+            }
+        }
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+    };
+
+    function login() {
+        myName = document.getElementById('uName').value.trim();
+        myPhone = document.getElementById('uPh').value.trim();
+        if(!myName || !myPhone) return;
+
+        localStorage.setItem('auro_user', JSON.stringify({name: myName, phone: myPhone}));
+
+        if(myPhone === ADMIN_PH) { isAdmin = true; startHub(); }
+        else {
+            showWaiting();
+            channel.publish('join_req', { name: myName, phone: myPhone });
+        }
+    }
+
+    function showWaiting() {
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('status-text').innerHTML = "Awaiting Admin Approval...<br><br><small>TikTok@miminio9</small>";
+    }
+
+    function logout() { localStorage.clear(); location.reload(); }
+
+    channel.subscribe('control', (m) => {
+        if(m.data.target === myPhone && m.data.action === 'allow') startHub();
+    });
+
+    function startHub() {
+        document.getElementById('login-scr').style.display = 'none';
+        document.getElementById('chat-scr').style.display = 'flex';
+        if(isAdmin) {
+            document.getElementById('admin-btn').style.display = 'inline-block';
+            channel.subscribe('join_req', (m) => updateAdminUI(m.data));
+        }
+        channel.subscribe('chat', (m) => render(m.data));
+    }
+
+    function sendTxt() {
+        let val = document.getElementById('msg-box').value;
+        if(!val.trim()) return;
+        channel.publish('chat', { user: myName, phone: myPhone, text: val, type: 'txt', admin: isAdmin });
+        document.getElementById('msg-box').value = '';
+    }
+
+    function sendImg(input) {
+        const file = input.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX = 400; let w = img.width, h = img.height;
+                if(w > MAX) { h *= MAX/w; w = MAX; }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                channel.publish('chat', { user: myName, phone: myPhone, img: canvas.toDataURL('image/jpeg', 0.1), type: 'img', admin: isAdmin });
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function render(data) {
+        const flow = document.getElementById('msg-flow');
+        const isMe = data.phone === myPhone;
+        const div = document.createElement('div');
+        div.className = `bubble ${isMe ? 'sent' : 'recv'}`;
+        let content = (data.type === 'img') ? `<img src="${data.img}" class="chat-img">` : data.text;
+        div.innerHTML = `<small style="display:block; font-size:9px; opacity:0.6; margin-bottom:4px;">${data.user} ${data.admin?'🛡️':''}</small>${content}`;
+        flow.appendChild(div);
+        flow.scrollTop = flow.scrollHeight;
+    }
+
+    function updateAdminUI(data) {
+        const list = document.getElementById('request-list');
+        const row = document.createElement('div');
+        row.style = "background:var(--glass); padding:15px; border-radius:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;";
+        row.innerHTML = `<div><b>${data.name}</b><br><small>${data.phone}</small></div>
+        <button onclick="channel.publish('control',{target:'${data.phone}',action:'allow'}); this.parentElement.remove();" style="background:var(--accent); border:none; padding:8px 15px; border-radius:10px; font-weight:bold;">ALLOW</button>`;
+        list.appendChild(row);
+    }
+
+    function toggleAdmin() {
+        const d = document.getElementById('admin-dash');
+        d.style.display = (d.style.display === 'block') ? 'none' : 'block';
+    }
+</script>
+</body>
+</html>
