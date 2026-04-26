@@ -1,0 +1,16 @@
+{
+  "name": "Vice Myanmar Premium",
+  "short_name": "Vice MM",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#0f0c29",
+  "icons": [
+    {
+      "src": "https://i.ibb.co/Sw5FXhdM/Screenshot-20260424-091735.jpg",
+      "sizes": "512x512",
+      "type": "image/jpg",
+      "purpose": "any maskable"
+    }
+  ]
+}
