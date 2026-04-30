@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>VICE HPET THA LAT</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0d0d0d">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+
+    <style>
+        :root { --bg: #0d0d0d; --glass: rgba(255, 255, 255, 0.08); --neon: #00f2fe; --admin-gold: #ffcc00; --red-alert: #ff3333; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+        .app-bg { position: fixed; inset: 0; background: linear-gradient(45deg, #0d0d0d 30%, #1a1a2e 100%); z-index: -1; }
+        
+        /* Login UI */
+        #login-scr { height: 100%; display: flex; align-items: center; justify-content: center; padding: 25px; }
+        .premium-card { background: var(--glass); backdrop-filter: blur(20px); border-radius: 40px; padding: 40px 30px; border: 1px solid rgba(255,255,255,0.1); width: 100%; max-width: 380px; text-align: center; }
+        .v-logo { font-size: 50px; font-weight: 900; background: #fff; color: #000; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; border-radius: 22px; margin: 0 auto 20px; box-shadow: 0 0 25px var(--neon); }
+        .v-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px; color: #fff; padding: 15px; margin-bottom: 15px; width: 100%; outline: none; }
+        .v-btn { background: var(--neon); color: #000; font-weight: bold; width: 100%; padding: 15px; border-radius: 18px; border: none; text-transform: uppercase; }
+
+        /* Chat UI */
+        #chat-scr { flex: 1; display: none; flex-direction: column; height: 100dvh; overflow: hidden; }
+        #msg-flow { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .bubble { max-width: 85%; padding: 12px 16px; border-radius: 22px; font-size: 15px; word-wrap: break-word; }
+        .sent { align-self: flex-end; background: var(--neon); color: #000; border-bottom-right-radius: 4px; }
+        .recv { align-self: flex-start; background: var(--glass); color: #fff; border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+        
+        .input-bar { padding: 12px 18px; background: rgba(10,10,10,0.95); backdrop-filter: blur(15px); display: flex; align-items: center; gap: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--glass); }
+        .msg-input { flex: 1; background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 25px; padding: 10px 18px; color: #fff; outline: none; }
+        
+        /* Management UI */
+        .admin-panel { position: fixed; inset: 0; background: #000; z-index: 9999; padding: 40px 20px; display: none; overflow-y: auto; }
+        .user-row { background: #161616; padding: 20px; border-radius: 25px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .btn-group-custom { display: flex; gap: 8px; margin-top: 15px; }
+        .btn-custom { flex: 1; border: none; padding: 10px; border-radius: 12px; font-weight: 600; font-size: 13px; }
+        .btn-allow { background: #198754; color: #fff; }
+        .btn-block { background: #dc3545; color: #fff; }
+        .btn-admin { background: #ffc107; color: #000; }
+        .approved-tick { background: rgba(25, 135, 84, 0.2); color: #2ecc71; border: 1px solid #198754; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div class="app-bg"></div>
+
+<div id="login-scr">
+    <div class="premium-card">
+        <div class="v-logo">V</div>
+        <h4 style="letter-spacing: 2px;">VICE</h4>
+        <p style="opacity: 0.5; font-size: 10px; letter-spacing: 4px;">HPET THA LAT</p>
+        <div id="login-form">
+            <input type="text" id="uName" placeholder="Username" class="v-input">
+            <input type="tel" id="uPh" placeholder="Phone Number" class="v-input">
+            <button onclick="login()" class="v-btn">Enter Universe</button>
+        </div>
+        <div id="status-box" style="display:none;">
+            <div class="spinner-border text-info mb-3"></div>
+            <div style="color:var(--neon);">Tiktok@miminio9သို့ဆက်သွယ်ပါ</div style="color:var(--admin-gold);">Owner Thoon Nay Zin
+            
+            
+        </div>
+    </div>
+</div>
+
+<div id="chat-scr">
+    <div class="header" style="height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; background:rgba(0,0,0,0.5); border-bottom:1px solid var(--glass);">
+        <div style="font-weight: 800;">VICE <span style="color:var(--neon); font-weight:300;">HTL</span></div>
+        <div class="d-flex gap-3">
+            <i id="admin-icon" onclick="toggleAdmin()" class="bi bi-shield-lock-fill" style="display:none; color:var(--admin-gold); cursor:pointer; font-size: 1.5rem;"></i>
+            <i onclick="logout()" class="bi bi-power" style="cursor:pointer; font-size: 1.3rem; color:var(--red-alert);"></i>
+        </div>
+    </div>
+    <div id="msg-flow"></div>
+    <div class="input-bar">
+        <label class="m-0"><i class="bi bi-image" style="font-size: 1.5rem; color:var(--neon); cursor:pointer;"></i><input type="file" id="img-in" hidden accept="image/*" onchange="sendImg(this)"></label>
+        <input type="text" id="msg-box" class="msg-input" placeholder="Types a message" autocomplete="off">
+        <i onclick="sendTxt()" class="bi bi-send-fill" style="font-size: 1.6rem; color:var(--neon); cursor:pointer;"></i>
+    </div>
+</div>
+
+<div id="admin-panel" class="admin-panel">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 style="font-weight: 800;">MANAGEMENT</h4>
+        <button onclick="toggleAdmin()" class="btn btn-outline-light btn-sm px-3">BACK</button>
+    </div>
+    <div id="req-list"></div>
+</div>
+
+<script>
+    const OWNER_PH = "09672264454";
+    const API_KEY = "798ruA.QsqVgw:1L1JS7q66zi_Lusa4k-A66MwN0IP9lSw1qhHsV7LfGY";
+    const ably = new Ably.Realtime({ key: API_KEY });
+    
+    // Namespace အတိအကျ (Space ပါပါစေ)
+    const NS = "Vice HPET THA LAT:"; 
+    const channel = ably.channels.get(NS + 'main');
+    const system = ably.channels.get(NS + 'system', { params: { rewind: '50' } });
+
+    let myName = "", myPhone = "", myRole = "user";
+    let pendingUsers = new Set();
+
+    window.onload = () => {
+        const saved = JSON.parse(localStorage.getItem('vice_user'));
+        if(saved) { myName = saved.name; myPhone = saved.phone; startSequence(); }
+    };
+
+    function login() {
+        myName = document.getElementById('uName').value.trim();
+        myPhone = document.getElementById('uPh').value.trim();
+        if(!myName || !myPhone) return alert("Fill details!");
+        localStorage.setItem('vice_user', JSON.stringify({name: myName, phone: myPhone}));
+        startSequence();
+    }
+
+    function startSequence() {
+        if(myPhone === OWNER_PH) {
+            myRole = "owner";
+            initApp();
+        } else {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('status-box').style.display = 'block';
+            system.subscribe('control', m => {
+                if(m.data.target === myPhone) {
+                    if(m.data.action === 'allow') initApp();
+                    if(m.data.action === 'make_admin') { myRole = "admin"; initApp(); }
+                    if(m.data.action === 'block') logout();
+                }
+            });
+            system.publish('join_req', { name: myName, phone: myPhone });
+        }
+    }
+
+    function initApp() {
+        document.getElementById('login-scr').style.display = 'none';
+        document.getElementById('chat-scr').style.display = 'flex';
+        if(myRole === 'owner' || myRole === 'admin') {
+            document.getElementById('admin-icon').style.display = 'block';
+            system.subscribe('join_req', m => renderReq(m.data));
+        }
+        // တစ်ရက်စာ History ခေါ်ခြင်း
+        channel.history({limit: 100}, (err, result) => {
+            if(!err) {
+                const flow = document.getElementById('msg-flow');
+                flow.innerHTML = '';
+                result.items.reverse().forEach(m => renderMsg(m.data));
+            }
+        });
+        channel.subscribe('chat', m => renderMsg(m.data));
+    }
+
+    function renderReq(data) {
+        if(pendingUsers.has(data.phone)) return;
+        pendingUsers.add(data.phone);
+        const list = document.getElementById('req-list');
+        const div = document.createElement('div');
+        div.id = 'req-' + data.phone;
+        div.className = "user-row";
+        div.innerHTML = `
+            <div style="font-size: 18px; font-weight: 700;">${data.name}</div>
+            <div style="font-size: 13px; opacity: 0.5;">${data.phone}</div>
+            <div class="btn-group-custom">
+                <button id="allow-btn-${data.phone}" onclick="approve('${data.phone}')" class="btn-custom btn-allow">Allow</button>
+                <button onclick="blockUser('${data.phone}')" class="btn-custom btn-block">Block</button>
+                <button onclick="makeAdmin('${data.phone}')" class="btn-custom btn-admin">Admin</button>
+            </div>`;
+        list.prepend(div);
+    }
+
+    function approve(t) { 
+        system.publish('control', { target: t, action: 'allow' }); 
+        const btn = document.getElementById('allow-btn-' + t);
+        if(btn) {
+            btn.innerHTML = 'APPROVED <i class="bi bi-check-lg"></i>';
+            btn.classList.remove('btn-allow');
+            btn.classList.add('approved-tick');
+            btn.onclick = null;
+        }
+    }
+
+    function blockUser(t) { system.publish('control', { target: t, action: 'block' }); document.getElementById('req-'+t).remove(); pendingUsers.delete(t); }
+    function makeAdmin(t) { system.publish('control', { target: t, action: 'make_admin' }); alert("Admin role assigned!"); }
+
+    function sendTxt() {
+        const box = document.getElementById('msg-box');
+        if(!box.value.trim()) return;
+        channel.publish('chat', { name: myName, phone: myPhone, text: box.value, type: 'txt', role: myRole });
+        box.value = '';
+    }
+
+    function renderMsg(data) {
+        const flow = document.getElementById('msg-flow');
+        const div = document.createElement('div');
+        div.className = `bubble ${data.phone === myPhone ? 'sent' : 'recv'}`;
+        let tag = data.role === 'owner' ? '<span style="font-size:9px; background:var(--admin-gold); color:#000; padding:2px 5px; border-radius:4px; margin-left:5px; font-weight:bold;">OWNER</span>' : (data.role === 'admin' ? '<span style="font-size:9px; background:#fff; color:#000; padding:2px 5px; border-radius:4px; margin-left:5px; font-weight:bold;">ADMIN</span>' : '');
+        div.innerHTML = `<small style="display:block; font-size:10px; opacity:0.6;">${data.name}${tag}</small>${data.type==='img' ? `<img src="${data.img}" style="width:100%; border-radius:12px; margin-top:5px;">` : data.text}`;
+        flow.appendChild(div);
+        flow.scrollTop = flow.scrollHeight;
+    }
+
+    function sendImg(input) {
+        const file = input.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                if(w > 600) { h *= 600/w; w = 600; }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                channel.publish('chat', { name: myName, phone: myPhone, img: canvas.toDataURL('image/jpeg', 0.3), type: 'img', role: myRole });
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function toggleAdmin() { const p = document.getElementById('admin-panel'); p.style.display = (p.style.display === 'block') ? 'none' : 'block'; }
+    function logout() { localStorage.clear(); location.reload(); }
+    document.getElementById('msg-box').onkeypress = (e) => { if(e.key==='Enter') sendTxt(); };
+
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+</script>
+</body>
+</html>
